@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::io;
+use std::io::{BufRead, Write};
 use std::str::FromStr;
 
 #[repr(u8)]
@@ -16,6 +17,8 @@ impl FromStr for BatchStatus {
         match s.trim() {
             "1" => Ok(BatchStatus::Active),
             "0" => Ok(BatchStatus::Inactive),
+            "Active" => Ok(BatchStatus::Active),
+            "Inactive" => Ok(BatchStatus::Inactive),
             _ => Err(ParseBatchStatusError),
         }
     }
@@ -37,6 +40,8 @@ struct Batch {
 
 fn main() {
     let mut batch_details: Vec<Batch> = vec![];
+
+    load_batch(&mut batch_details);
 
     // Main Menu Loop
     loop {
@@ -75,8 +80,42 @@ fn main() {
                 },
                 _ => (),
             }
+
+            save_batch(&batch_details);
         }
     }
+}
+
+fn save_batch(batch_details: &Vec<Batch>) {
+    // Save batch details to a file
+    println!("Saving batch details to a file");
+
+    let mut file = std::fs::File::create("batch_details.txt").unwrap();
+    for batch in batch_details {
+        let line_to_write = format!("{},{}\n", batch.name, batch.status);
+        file.write_all(line_to_write.as_bytes()).unwrap();
+    }
+
+    println!("Batch details saved to a file");
+}
+
+fn load_batch(original_batch_details: &mut Vec<Batch>) {
+    // Load batch details from a file
+    let mut batch_details: Vec<Batch> = vec![];
+    let file = match std::fs::File::open("batch_details.txt") {
+        Ok(file) => {
+            let reader = std::io::BufReader::new(file);
+            for line in reader.lines() {
+                let line = line.unwrap();
+                let mut batch = line.split(",");
+                let name = batch.next().unwrap().to_string();
+                let status = batch.next().unwrap().parse::<BatchStatus>().unwrap();
+                batch_details.push(Batch { name, status });
+            }
+            *original_batch_details = batch_details;
+        }
+        Err(e) => println!("Error opening file: {}", e),
+    };
 }
 
 fn add_batch(batch_details: &mut Vec<Batch>) {
@@ -94,7 +133,7 @@ fn add_batch(batch_details: &mut Vec<Batch>) {
         .expect("Failed to read line");
 
     let new_batch = Batch {
-        name: batch_name,
+        name: batch_name.trim().to_string(),
         status: batch_status
             .trim()
             .parse()
