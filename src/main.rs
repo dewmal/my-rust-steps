@@ -1,10 +1,10 @@
-use std::fmt::Display;
+use std::fmt::{Display, write};
 use std::io;
 use std::io::{BufRead, Write};
 use std::str::FromStr;
 
 #[repr(u8)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
 enum BatchStatus {
     Active = 1,
     Inactive = 0,
@@ -38,8 +38,58 @@ struct Batch {
     status: BatchStatus,
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
+enum StudentEnrollmentType {
+    Online = 1,
+    Physical = 0,
+}
+
+impl Display for StudentEnrollmentType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StudentEnrollmentType::Online => write!(f, "Online"),
+            StudentEnrollmentType::Physical => write!(f, "Physical"),
+        }
+    }
+}
+
+impl FromStr for StudentEnrollmentType {
+    type Err = ParseBatchStatusError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim() {
+            "1" => Ok(StudentEnrollmentType::Online),
+            "0" => Ok(StudentEnrollmentType::Physical),
+            "Online" => Ok(StudentEnrollmentType::Online),
+            "Physical" => Ok(StudentEnrollmentType::Physical),
+            _ => Err(ParseBatchStatusError),
+        }
+    }
+}
+#[derive(Debug, Clone)]
+struct Student {
+    id: String,
+    name: String,
+    nic: String,
+    batch: String,
+    enrollment_type: StudentEnrollmentType,
+}
+
+impl Display for Student {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write(
+            f,
+            format_args!(
+                "ID: {}\nName: {}\nNIC: {}\nBatch: {}\nEnrollment Type: {}\n",
+                self.id, self.name, self.nic, self.batch, self.enrollment_type
+            ),
+        )
+    }
+}
+
 fn main() {
     let mut batch_details: Vec<Batch> = vec![];
+    let mut student_details: Vec<Student> = vec![];
 
     load_batch(&mut batch_details);
 
@@ -64,7 +114,7 @@ fn main() {
 
             match sub_choice.trim() {
                 "1" => match main_choice.as_str() {
-                    "1" => add_student(&mut batch_details),
+                    "1" => add_student(&mut batch_details, &mut student_details),
                     "2" => add_batch(&mut batch_details),
                     _ => (),
                 },
@@ -122,12 +172,14 @@ fn add_batch(batch_details: &mut Vec<Batch>) {
     let mut batch_name = String::new();
     let mut batch_status = String::new();
 
-    println!("Enter batch Name : ");
+    print!("Enter batch Name : ");
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut batch_name)
         .expect("Failed to read line");
 
-    println!("Enter batch Status : ");
+    print!("Enter batch Status : ");
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut batch_status)
         .expect("Failed to read line");
@@ -143,7 +195,8 @@ fn add_batch(batch_details: &mut Vec<Batch>) {
     batch_details.push(new_batch);
     println!("Batch added successfully");
 
-    println!("Do you want to add another batch? (y/n): ");
+    print!("Do you want to add another batch? (y/n): ");
+    io::stdout().flush().unwrap();
     let mut choice = String::new();
     io::stdin()
         .read_line(&mut choice)
@@ -158,12 +211,14 @@ fn update_batch(batch_details: &mut Vec<Batch>) {
     let mut batch_name = String::new();
     let mut batch_status = String::new();
 
-    println!("Enter batch Name : ");
+    print!("Enter batch Name : ");
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut batch_name)
         .expect("Failed to read line");
 
-    println!("Enter batch Status : ");
+    print!("Enter batch Status : ");
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut batch_status)
         .expect("Failed to read line");
@@ -190,18 +245,98 @@ fn view_batches(batch_details: &Vec<Batch>) {
     }
 }
 
-fn add_student(batch_details: &mut Vec<Batch>) {
+fn add_student(batch_details: &mut Vec<Batch>, student_details: &mut Vec<Student>) {
     let mut batch_name = String::new();
-    let batch_status = String::new();
-    let student_name = String::new();
-    let student_id = String::new();
-    let student_email = String::new();
-    let student_phone = String::new();
+    let mut student_enrollment_type_id = String::new();
+    let mut student_name = String::new();
+    let mut student_id = String::new();
+    let mut student_nic = String::new();
 
-    println!("Enter batch Number (Students should be added) : ");
+    print!("Enter batch Number (Students should be added) : ");
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut batch_name)
         .expect("Failed to read line");
+
+    let mut selected_batch: Option<Batch> = None;
+    let batch_details_copy = batch_details.clone();
+    for batch in batch_details_copy {
+        if batch.name == batch_name.trim() && batch.status == BatchStatus::Active {
+            selected_batch = Some(batch.clone());
+            break;
+        }
+    }
+
+    match selected_batch {
+        Some(batch) => {
+            print!("\nEnter student Name : ");
+            io::stdout().flush().unwrap();
+            io::stdin()
+                .read_line(&mut student_name)
+                .expect("Failed to read line");
+
+            print!("\nEnter student Enrollment Type (Online =1 /Physical = 0) : ");
+            io::stdout().flush().unwrap();
+            io::stdin()
+                .read_line(&mut student_enrollment_type_id)
+                .expect("Failed to read line");
+
+            let student_enrollment_type: StudentEnrollmentType = student_enrollment_type_id
+                .trim()
+                .parse()
+                .expect("Failed to parse student enrollment type");
+
+            student_id += match student_enrollment_type {
+                StudentEnrollmentType::Online => "OR",
+                StudentEnrollmentType::Physical => "PR",
+            };
+
+            student_id += batch_name.trim();
+            student_id += &format!("{}", student_details.len() + 1);
+
+            println!("Student ID: {}", student_id);
+
+            print!("\nEnter student NIC : ");
+            io::stdout().flush().unwrap();
+            io::stdin()
+                .read_line(&mut student_nic)
+                .expect("Failed to read line");
+
+            let new_student = Student {
+                name: student_name,
+                enrollment_type: student_enrollment_type,
+                id: student_id,
+                nic: student_nic,
+                batch: batch.name,
+            };
+            println!("Student: {}", new_student);
+            student_details.push(new_student);
+            println!("Student added successfully");
+            print!("Do you want to add another student? (y/n): ");
+            io::stdout().flush().unwrap();
+            let mut choice = String::new();
+            io::stdin()
+                .read_line(&mut choice)
+                .expect("Failed to read line");
+
+            if choice.trim() == "y" {
+                add_student(batch_details, student_details);
+            }
+        }
+        None => {
+            println!("Batch not found");
+            print!("Do you want to try again (y/n): ");
+            io::stdout().flush().unwrap();
+
+            let mut choice = String::new();
+            io::stdin()
+                .read_line(&mut choice)
+                .expect("Failed to read line");
+            if choice.trim() == "y" {
+                add_student(batch_details, student_details);
+            }
+        }
+    }
 }
 
 fn print_main_menu() -> String {
@@ -227,8 +362,8 @@ fn print_main_menu() -> String {
         println!("[{}] {}", index + 1, command);
     }
 
-    println!("Enter your choice: ");
-
+    print!("Enter your choice: ");
+    io::stdout().flush().unwrap();
     let mut choice = String::new();
     io::stdin()
         .read_line(&mut choice)
@@ -262,7 +397,8 @@ fn print_student_menu() -> String {
         println!("[{}] {}", index + 1, command);
     }
 
-    println!("Enter your choice: ");
+    print!("Enter your choice: ");
+    io::stdout().flush().unwrap();
 
     let mut choice = String::new();
     io::stdin()
