@@ -115,7 +115,7 @@ fn main() {
             match sub_choice.trim() {
                 "1" => match main_choice.as_str() {
                     "1" => add_student(&mut batch_details, &mut student_details),
-                    "2" => add_batch(&mut batch_details),
+                    "2" => update_student(&mut student_details),
                     _ => (),
                 },
                 "2" => match main_choice.as_str() {
@@ -124,7 +124,7 @@ fn main() {
                     _ => (),
                 },
                 "3" => match main_choice.as_str() {
-                    "1" => println!("View Student Profile"),
+                    "1" => view_students(&student_details),
                     "2" => view_batches(&batch_details),
                     _ => (),
                 },
@@ -136,7 +136,12 @@ fn main() {
         }
     }
 }
-
+fn view_students(student_details: &Vec<Student>) {
+    println!("Viewing Students");
+    for student in student_details {
+        println!("{}", student);
+    }
+}
 fn save_student(student_details: &Vec<Student>) {
     // Save student details to a file
     println!("Saving student details to a file");
@@ -258,6 +263,77 @@ fn update_batch(batch_details: &mut Vec<Batch>) {
 fn view_batches(batch_details: &Vec<Batch>) {
     for batch in batch_details {
         println!("Batch Name: {} / Batch Status {}", batch.name, batch.status);
+    }
+}
+
+fn update_student_nic(student_id: &str, student_nic: &str, student_details: &mut Vec<Student>) {
+    for student in student_details.iter_mut() {
+        if student.id == student_id {
+            student.nic = student_nic.to_string();
+            println!("Student NIC updated successfully");
+            return;
+        }
+    }
+}
+
+fn update_student_name(student_id: &str, student_name: &str, student_details: &mut Vec<Student>) {
+    for student in student_details.iter_mut() {
+        if student.id == student_id {
+            student.name = student_name.to_string();
+            println!("Student name updated successfully");
+            return;
+        }
+    }
+}
+fn update_student(student_details: &mut Vec<Student>) {
+    // Update student details
+    let mut student_id = String::new();
+    print!("Enter student ID : ");
+    io::stdout().flush().unwrap();
+    io::stdin()
+        .read_line(&mut student_id)
+        .expect("Failed to read line");
+
+    let student_details_copy = student_details.clone();
+    for student in student_details_copy.iter() {
+        if student.id == student_id.trim() {
+            println!("\t Student Name : {}", student.name);
+            println!("\t Student Enrollment Type : {}", student.enrollment_type);
+            println!("\t Student NIC : {}", student.nic);
+            println!("\t Student Batch : {}", student.batch);
+
+            let mut update_choice = String::new();
+            println!("What do you want to update?");
+            println!("\t(1). Student Name");
+            println!("\t(2). Student NIC");
+            io::stdout().flush().unwrap();
+            io::stdin()
+                .read_line(&mut update_choice)
+                .expect("Failed to read line");
+            match update_choice.trim() {
+                "1" => {
+                    let mut student_name = String::new();
+                    print!("Enter student Name : ");
+                    io::stdout().flush().unwrap();
+                    io::stdin()
+                        .read_line(&mut student_name)
+                        .expect("Failed to read line");
+                    update_student_name(&student_id, &student_name, student_details);
+                }
+                "2" => {
+                    let mut student_nic = String::new();
+                    print!("Enter student NIC : ");
+                    io::stdout().flush().unwrap();
+                    io::stdin()
+                        .read_line(&mut student_nic)
+                        .expect("Failed to read line");
+                    update_student_nic(&student_id, &student_nic, student_details);
+                }
+                _ => println!("Invalid choice"),
+            }
+
+            return;
+        }
     }
 }
 
