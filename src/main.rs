@@ -132,8 +132,24 @@ fn main() {
             }
 
             save_batch(&batch_details);
+            save_student(&student_details);
         }
     }
+}
+
+fn save_student(student_details: &Vec<Student>) {
+    // Save student details to a file
+    println!("Saving student details to a file");
+    let mut file = std::fs::File::create("student_details.txt").unwrap();
+    for student in student_details {
+        let line_to_write = format!(
+            "{},{},{},{},{}\n",
+            student.id, student.name, student.nic, student.batch, student.enrollment_type
+        );
+        file.write_all(line_to_write.as_bytes()).unwrap();
+    }
+
+    println!("Student details saved to a file");
 }
 
 fn save_batch(batch_details: &Vec<Batch>) {
